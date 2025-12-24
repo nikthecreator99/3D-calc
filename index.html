@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="3D Print Cost">
+    <link rel="manifest" href="application/json,{%22name%22:%223D%20Print%20Cost%20Calculator%22,%22short_name%22:%223D%20Print%20Cost%22,%22icons%22:[{%22src%22:%22image/svg+xml,%253Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20192%20192%27%253E%253Crect%20fill=%27%231f2937%27%20width=%27192%27%20height=%27192%27/%253E%253Ctext%20x=%2750%25%27%20y=%2750%25%27%20font-size=%27140%27%20fill=%27%23fff%27%20text-anchor=%27middle%27%20dominant-baseline=%27middle%27%253E3D%253C/text%253E%253C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}],%22start_url%22:%22/%22,%22scope%22:%22/%22,%22display%22:%22standalone%22,%22background_color%22:%22%23111827%22,%22theme_color%22:%22%231f2937%22}">
+    <link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect fill='%231f2937' width='64' height='64'/><text x='50%' y='50%' font-size='44' fill='%23fff' text-anchor='middle' dominant-baseline='middle'>3D</text></svg>">
+    <title>3D Print Cost Calculator</title>
+    <style>
+        :root {
+            --color-bg-primary: #0f172a;
+            --color-bg-secondary: #1e293b;
+            --color-bg-tertiary: #334155;
+            --color-text-primary: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-primary: #06b6d4;
+            --color-primary-hover: #0891b2;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-error: #ef4444;
+            --color-border: #475569;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--color-bg-primary);
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1f2937 100%);
+            padding: 16px;
+            padding-top: max(16px, env(safe-area-inset-top));
+            box-shadow: var(--shadow-md);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .header-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-bar {
+            background: rgba(15, 23, 42, 0.9);
+            padding: 8px 16px;
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .status-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-online::before {
+            content: '●';
+            color: var(--color-success);
+        }
+
+        .status-offline::before {
+            content: '●';
+            color: var(--color-warning);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            padding-bottom: 100px;
+        }
+
+        .content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .card {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+
+        .stat-value.positive {
+            color: var(--color-success);
+        }
+
+        .stat-value.negative {
+            color: var(--color-error);
+        }
+
+        .stat-value.neutral {
+            color: var(--color-text-secondary);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: var(--color-bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-box-label {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .stat-box-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+
+        .spool-card {
+            background: var(--color-bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .spool-card:hover {
+            border-color: var(--color-primary);
+            transform: translateY(-2px);
+        }
+
+        .spool-color {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid var(--color-border);
+        }
+
+        .spool-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .spool-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--color-text-primary);
+        }
+
+        .spool-meta {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .spool-remaining {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+
+        .model-card {
+            background: var(--color-bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .model-card:hover {
+            border-color: var(--color-primary);
+            transform: translateY(-2px);
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .model-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--color-text-primary);
+        }
+
+        .model-status {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+        }
+
+        .model-status.sold {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--color-success);
+        }
+
+        .model-status.unsold {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+        }
+
+        .model-meta {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .model-costs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .cost-item {
+            font-size: 12px;
+            padding: 6px;
+            background: var(--color-bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+
+        .cost-label {
+            color: var(--color-text-secondary);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .cost-value {
+            color: var(--color-text-primary);
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .model-profit {
+            padding: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid var(--color-success);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-success);
+        }
+
+        .model-loss {
+            padding: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid var(--color-error);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-error);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .btn:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+            transform: scale(1.02);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-border);
+        }
+
+        .btn-danger {
+            background: var(--color-error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 12px;
+            width: auto;
+            margin-bottom: 0;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+            background: var(--color-bg-secondary);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .input-hint {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            margin-top: 4px;
+        }
+
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-width: 600px;
+            background: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            padding-top: 8px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 8px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--color-text-secondary);
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-item.active {
+            color: var(--color-primary);
+        }
+
+        .nav-item:hover {
+            color: var(--color-text-primary);
+        }
+
+        .icon {
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--color-bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--color-text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .btn-close:hover {
+            color: var(--color-text-primary);
+        }
+
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .color-option {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-option:hover, .color-option.selected {
+            border-color: var(--color-primary);
+            transform: scale(1.1);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--color-border);
+            margin: 16px 0;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-success);
+            border: 1px solid var(--color-success);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--color-warning);
+            border: 1px solid var(--color-warning);
+        }
+
+        .alert-info {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--color-primary);
+            border: 1px solid var(--color-primary);
+        }
+
+        .chart-container {
+            margin: 16px 0;
+        }
+
+        .simple-chart {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 120px;
+            margin: 12px 0;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: var(--color-primary);
+            border-radius: var(--radius-sm);
+            position: relative;
+            min-height: 20px;
+        }
+
+        .chart-label {
+            font-size: 10px;
+            color: var(--color-text-secondary);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .formula-box {
+            background: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-left: 3px solid var(--color-primary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            color: var(--color-text-secondary);
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-height: 600px) {
+            .content {
+                padding-bottom: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="header-title">
+                <span class="icon">🖨️</span>
+                <span>3D Cost Calc</span>
+            </h1>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-bar-item status-online">Работает офлайн</div>
+            <div class="status-bar-item" id="syncStatus">v1.0</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+
+            <!-- Dashboard Screen -->
+            <div id="dashboardScreen" class="screen active">
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <div class="stat-box-label">Филамента на складе</div>
+                        <div class="stat-box-value" id="totalSpoolValue">₽0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Общие расходы</div>
+                        <div class="stat-box-value" id="totalExpenses">₽0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Общая прибыль</div>
+                        <div class="stat-box-value" id="totalProfit">₽0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Всего печатей</div>
+                        <div class="stat-box-value" id="totalPrints">0</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="showModal('addSpoolModal')">➕ Добавить катушку</button>
+                <button class="btn btn-primary" onclick="showModal('addModelModal')">➕ Добавить печать</button>
+                <button class="btn btn-secondary" onclick="switchScreen('settingsScreen')">⚙️ Настройки</button>
+            </div>
+
+            <!-- Spools Screen -->
+            <div id="spoolsScreen" class="screen">
+                <div class="card">
+                    <div class="card-header">📦 Катушки филамента</div>
+                    <div id="spoolsList"></div>
+                </div>
+            </div>
+
+            <!-- Models Screen -->
+            <div id="modelsScreen" class="screen">
+                <div class="card">
+                    <div class="card-header">📊 Напечатанные модели</div>
+                    <div id="modelsList"></div>
+                </div>
+            </div>
+
+            <!-- Analytics Screen -->
+            <div id="analyticsScreen" class="screen">
+                <div class="card">
+                    <div class="card-header">📈 Аналитика</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Расходы на пластик</span>
+                        <span class="stat-value" id="analyticPlastic">₽0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Расходы на электричество</span>
+                        <span class="stat-value" id="analyticEnergy">₽0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Чистая прибыль</span>
+                        <span class="stat-value positive" id="analyticProfit">₽0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Продано моделей</span>
+                        <span class="stat-value" id="analyticSold">0</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">🏆 Топ модели по прибыли</div>
+                    <div id="topModels" style="font-size: 12px; color: var(--color-text-secondary);">Нет проданных моделей</div>
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settingsScreen" class="screen">
+                <div class="card">
+                    <div class="card-header">⚡ Электроэнергия</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Цена кВт⋅ч (₽)</label>
+                        <input type="number" class="form-input" id="energyPrice" value="8.5" step="0.01">
+                        <div class="input-hint">Стоимость электроэнергии за киловатт-час</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Мощность принтера (Вт)</label>
+                        <input type="number" class="form-input" id="printerPower" value="500" step="10">
+                        <div class="input-hint">Обычно 400-800 Вт для FDM принтера</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">💾 Данные</div>
+                    <button class="btn btn-secondary" onclick="exportData()">📥 Экспортировать (JSON)</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📤 Импортировать (JSON)</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
+                    <button class="btn btn-danger" onclick="if(confirm('Удалить все данные?')) clearAllData()">🗑️ Очистить все</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">ℹ️ Приложение</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Версия</span>
+                        <span class="stat-value">1.0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Статус</span>
+                        <span class="stat-value neutral">Полностью офлайн</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Хранилище</span>
+                        <span class="stat-value neutral">IndexedDB</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <button class="nav-item active" onclick="switchScreen('dashboardScreen')">
+                <div class="icon">📊</div>
+                <div>Главная</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('spoolsScreen')">
+                <div class="icon">📦</div>
+                <div>Катушки</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('modelsScreen')">
+                <div class="icon">🎨</div>
+                <div>Модели</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('analyticsScreen')">
+                <div class="icon">📈</div>
+                <div>Анализ</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('settingsScreen')">
+                <div class="icon">⚙️</div>
+                <div>Сеттинги</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Add Spool Modal -->
+    <div id="addSpoolModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Новая катушка</h2>
+                <button class="btn-close" onclick="hideModal('addSpoolModal')">✕</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Название/бренд</label>
+                <input type="text" class="form-input" id="spoolName" placeholder="e.g., Prusament PLA">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Материал</label>
+                <select class="form-select" id="spoolMaterial">
+                    <option>PLA</option>
+                    <option>PETG</option>
+                    <option>ABS</option>
+                    <option>TPU</option>
+                    <option>Другое</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Цвет</label>
+                <div class="color-picker-grid">
+                    <input type="color" class="color-option" id="spoolColor" value="#FF6B6B">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Вес катушки (г)</label>
+                <input type="number" class="form-input" id="spoolWeight" value="1000" step="100">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Цена катушки (₽)</label>
+                <input type="number" class="form-input" id="spoolPrice" placeholder="500" step="1">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Остаток (г)</label>
+                <input type="number" class="form-input" id="spoolRemaining" placeholder="1000" step="10">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Заметки</label>
+                <textarea class="form-textarea" id="spoolNotes" placeholder="Дополнительная информация..."></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="addSpool()">✓ Сохранить катушку</button>
+            <button class="btn btn-secondary" onclick="hideModal('addSpoolModal')">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Add Model Modal -->
+    <div id="addModelModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Новая печать</h2>
+                <button class="btn-close" onclick="hideModal('addModelModal')">✕</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Название модели</label>
+                <input type="text" class="form-input" id="modelName" placeholder="e.g., Funko Pop - Naruto">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Дата печати</label>
+                <input type="date" class="form-input" id="modelDate">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Катушка</label>
+                <select class="form-select" id="modelSpool">
+                    <option>Выберите катушку...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Расход пластика (г)</label>
+                <input type="number" class="form-input" id="modelFilament" placeholder="50" step="1">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Время печати (ч:мин)</label>
+                <input type="text" class="form-input" id="modelTime" placeholder="2:30">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Заметки</label>
+                <textarea class="form-textarea" id="modelNotes" placeholder="Комментарии..."></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="addModel()">✓ Сохранить печать</button>
+            <button class="btn btn-secondary" onclick="hideModal('addModelModal')">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Model Details Modal -->
+    <div id="modelDetailsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modelDetailsTitle">Детали модели</h2>
+                <button class="btn-close" onclick="hideModal('modelDetailsModal')">✕</button>
+            </div>
+
+            <div id="modelDetailsContent"></div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">💰 Продажа</div>
+
+            <div id="saleSection">
+                <div class="form-group">
+                    <label class="form-label">Цена продажи (₽)</label>
+                    <input type="number" class="form-input" id="salePrice" placeholder="0" step="1">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Доп. расходы (₽)</label>
+                    <input type="number" class="form-input" id="saleExpenses" value="0" step="1">
+                    <div class="input-hint">Доставка, комиссия и т.п.</div>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveSale()">✓ Отметить как продано</button>
+            </div>
+
+            <div id="saleDetailsSection" style="display: none;">
+                <div class="stat-row">
+                    <span class="stat-label">Цена продажи</span>
+                    <span class="stat-value" id="salePriceDisplay">₽0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Себестоимость</span>
+                    <span class="stat-value" id="costDisplay">₽0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Доп. расходы</span>
+                    <span class="stat-value" id="expensesDisplay">₽0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Прибыль / Убыток</span>
+                    <span class="stat-value" id="profitDisplay">₽0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Маржа</span>
+                    <span class="stat-value" id="marginDisplay">0%</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="unsellModel()" style="margin-top: 12px;">✕ Отменить продажу</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <button class="btn btn-danger" onclick="deleteModel()">🗑️ Удалить модель</button>
+            <button class="btn btn-secondary" onclick="hideModal('modelDetailsModal')">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // ============== DATABASE ==============
+        let db;
+        const DB_NAME = 'PrintCostDB';
+        const STORES = {
+            spools: 'spools',
+            models: 'models',
+            settings: 'settings'
+        };
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORES.spools)) {
+                        db.createObjectStore(STORES.spools, { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains(STORES.models)) {
+                        db.createObjectStore(STORES.models, { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains(STORES.settings)) {
+                        db.createObjectStore(STORES.settings, { keyPath: 'key' });
+                    }
+                };
+            });
+        }
+
+        function dbGet(store, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(store);
+                const objectStore = transaction.objectStore(store);
+                const request = objectStore.get(key);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        function dbGetAll(store) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(store);
+                const objectStore = transaction.objectStore(store);
+                const request = objectStore.getAll();
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        function dbAdd(store, data) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(store, 'readwrite');
+                const objectStore = transaction.objectStore(store);
+                const request = objectStore.add(data);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    resolve(request.result);
+                    updateUI();
+                };
+            });
+        }
+
+        function dbPut(store, data) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(store, 'readwrite');
+                const objectStore = transaction.objectStore(store);
+                const request = objectStore.put(data);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    resolve(request.result);
+                    updateUI();
+                };
+            });
+        }
+
+        function dbDelete(store, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(store, 'readwrite');
+                const objectStore = transaction.objectStore(store);
+                const request = objectStore.delete(key);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    resolve();
+                    updateUI();
+                };
+            });
+        }
+
+        // ============== SAMPLE DATA ==============
+        async function initSampleData() {
+            const spools = await dbGetAll(STORES.spools);
+            if (spools.length === 0) {
+                // Spool 1: Red PLA
+                await dbAdd(STORES.spools, {
+                    name: 'Prusament PLA Sunset Red',
+                    material: 'PLA',
+                    color: '#FF6B6B',
+                    weight: 1000,
+                    price: 550,
+                    remaining: 650,
+                    notes: 'Хороший цвет для Funko Pop'
+                });
+
+                // Spool 2: Blue PETG
+                await dbAdd(STORES.spools, {
+                    name: 'MatterHackers PETG Blue',
+                    material: 'PETG',
+                    color: '#4ECDC4',
+                    weight: 1000,
+                    price: 650,
+                    remaining: 890,
+                    notes: 'Прочный пластик'
+                });
+
+                // Model 1: Printed, not sold
+                await dbAdd(STORES.models, {
+                    name: 'Funko Pop - Naruto',
+                    date: '2025-12-10',
+                    spoolId: 1,
+                    filament: 120,
+                    hours: 5,
+                    minutes: 30,
+                    notes: 'Качество отличное',
+                    salePrice: null,
+                    saleExpenses: null,
+                    saleDate: null
+                });
+
+                // Model 2: Printed and SOLD with profit
+                await dbAdd(STORES.models, {
+                    name: 'Funko Pop - One Piece Luffy',
+                    date: '2025-12-12',
+                    spoolId: 1,
+                    filament: 115,
+                    hours: 5,
+                    minutes: 15,
+                    notes: 'Продано на маркетплейсе',
+                    salePrice: 1200,
+                    saleExpenses: 100,
+                    saleDate: '2025-12-15'
+                });
+
+                updateUI();
+            }
+        }
+
+        // ============== UI NAVIGATION ==============
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+
+            updateUI();
+        }
+
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            if (modalId === 'addModelModal') {
+                populateSpoolSelect();
+            }
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            document.getElementById(modalId).classList.remove('active');
+            setTimeout(() => {
+                document.getElementById(modalId).classList.remove('active');
+            }, 10);
+        }
+
+        // ============== SPOOL FUNCTIONS ==============
+        async function addSpool() {
+            const spool = {
+                name: document.getElementById('spoolName').value,
+                material: document.getElementById('spoolMaterial').value,
+                color: document.getElementById('spoolColor').value,
+                weight: parseInt(document.getElementById('spoolWeight').value) || 1000,
+                price: parseFloat(document.getElementById('spoolPrice').value) || 0,
+                remaining: parseInt(document.getElementById('spoolRemaining').value) || 0,
+                notes: document.getElementById('spoolNotes').value
+            };
+
+            if (!spool.name || !spool.price) {
+                alert('Заполните название и цену');
+                return;
+            }
+
+            await dbAdd(STORES.spools, spool);
+            hideModal('addSpoolModal');
+            document.getElementById('addSpoolModal').querySelector('form')?.reset();
+            document.getElementById('spoolName').value = '';
+            document.getElementById('spoolPrice').value = '';
+            document.getElementById('spoolRemaining').value = '';
+            document.getElementById('spoolNotes').value = '';
+        }
+
+        async function renderSpools() {
+            const spools = await dbGetAll(STORES.spools);
+            const list = document.getElementById('spoolsList');
+            list.innerHTML = '';
+
+            for (const spool of spools) {
+                const pricePerGram = spool.price / spool.weight;
+                const html = `
+                    <div class="spool-card" onclick="showSpoolDetails(${spool.id})">
+                        <div class="spool-color" style="background: ${spool.color}"></div>
+                        <div class="spool-info">
+                            <div class="spool-name">${spool.name}</div>
+                            <div class="spool-meta">${spool.material} • ${spool.color}</div>
+                            <div class="spool-remaining">Остаток: ${spool.remaining}г (₽${(pricePerGram * spool.remaining).toFixed(2)})</div>
+                            <div class="spool-meta">₽${pricePerGram.toFixed(2)}/г</div>
+                        </div>
+                    </div>
+                `;
+                list.innerHTML += html;
+            }
+
+            if (spools.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary); padding: 20px;">Нет катушек. Добавьте первую!</p>';
+            }
+        }
+
+        async function showSpoolDetails(spoolId) {
+            const spool = await dbGet(STORES.spools, spoolId);
+            // Modal with edit/delete options
+            alert(`${spool.name}\n${spool.material}\nОстаток: ${spool.remaining}г\nЦена: ₽${spool.price}`);
+        }
+
+        // ============== MODEL FUNCTIONS ==============
+        async function populateSpoolSelect() {
+            const spools = await dbGetAll(STORES.spools);
+            const select = document.getElementById('modelSpool');
+            select.innerHTML = '<option>Выберите катушку...</option>';
+            spools.forEach(spool => {
+                select.innerHTML += `<option value="${spool.id}">${spool.name} (${spool.material})</option>`;
+            });
+        }
+
+        async function addModel() {
+            const name = document.getElementById('modelName').value;
+            const date = document.getElementById('modelDate').value;
+            const spoolId = parseInt(document.getElementById('modelSpool').value);
+            const filament = parseInt(document.getElementById('modelFilament').value);
+            const time = document.getElementById('modelTime').value;
+            const notes = document.getElementById('modelNotes').value;
+
+            if (!name || !date || !spoolId || !filament || !time) {
+                alert('Заполните все обязательные поля');
+                return;
+            }
+
+            const [hours, minutes] = time.split(':').map(x => parseInt(x) || 0);
+
+            const model = {
+                name, date, spoolId, filament, hours, minutes, notes,
+                salePrice: null, saleExpenses: null, saleDate: null
+            };
+
+            const spool = await dbGet(STORES.spools, spoolId);
+            spool.remaining -= filament;
+            await dbPut(STORES.spools, spool);
+
+            await dbAdd(STORES.models, model);
+            hideModal('addModelModal');
+
+            // Reset form
+            document.getElementById('modelName').value = '';
+            document.getElementById('modelDate').value = '';
+            document.getElementById('modelSpool').value = '';
+            document.getElementById('modelFilament').value = '';
+            document.getElementById('modelTime').value = '';
+            document.getElementById('modelNotes').value = '';
+        }
+
+        async function renderModels() {
+            const models = await dbGetAll(STORES.models);
+            const list = document.getElementById('modelsList');
+            list.innerHTML = '';
+
+            for (const model of models) {
+                const spool = await dbGet(STORES.spools, model.spoolId);
+                const pricePerGram = spool.price / spool.weight;
+                const plasticCost = model.filament * pricePerGram;
+
+                const energyPrice = parseFloat(localStorage.getItem('energyPrice') || '8.5');
+                const printerPower = parseFloat(localStorage.getItem('printerPower') || '500');
+                const totalHours = model.hours + model.minutes / 60;
+                const energyCost = (printerPower / 1000) * totalHours * energyPrice;
+
+                const totalCost = plasticCost + energyCost;
+
+                const isSold = model.salePrice !== null;
+                const statusClass = isSold ? 'sold' : 'unsold';
+                const statusText = isSold ? '✓ Продано' : '⏳ На складе';
+
+                let profitHTML = '';
+                if (isSold) {
+                    const profit = model.salePrice - totalCost - (model.saleExpenses || 0);
+                    const profitClass = profit > 0 ? 'model-profit' : profit === 0 ? 'model-profit' : 'model-loss';
+                    const profitText = profit > 0 ? `✓ +₽${profit.toFixed(2)}` : profit === 0 ? `= ₽0` : `✗ -₽${Math.abs(profit).toFixed(2)}`;
+                    profitHTML = `<div class="${profitClass}">${profitText}</div>`;
+                }
+
+                const html = `
+                    <div class="model-card" onclick="showModelDetails(${model.id})">
+                        <div class="model-header">
+                            <div class="model-title">${model.name}</div>
+                            <span class="model-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="model-meta">${model.date} • ${model.hours}ч ${model.minutes}м</div>
+                        <div class="model-costs">
+                            <div class="cost-item"><span class="cost-label">Пластик</span><span class="cost-value">₽${plasticCost.toFixed(2)}</span></div>
+                            <div class="cost-item"><span class="cost-label">Электро</span><span class="cost-value">₽${energyCost.toFixed(2)}</span></div>
+                            <div class="cost-item"><span class="cost-label">Всего</span><span class="cost-value">₽${totalCost.toFixed(2)}</span></div>
+                        </div>
+                        ${profitHTML}
+                    </div>
+                `;
+                list.innerHTML += html;
+            }
+
+            if (models.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary); padding: 20px;">Нет печатей. Начните с добавления!</p>';
+            }
+        }
+
+        let currentModelId = null;
+
+        async function showModelDetails(modelId) {
+            currentModelId = modelId;
+            const model = await dbGet(STORES.models, modelId);
+            const spool = await dbGet(STORES.spools, model.spoolId);
+
+            const pricePerGram = spool.price / spool.weight;
+            const plasticCost = model.filament * pricePerGram;
+
+            const energyPrice = parseFloat(localStorage.getItem('energyPrice') || '8.5');
+            const printerPower = parseFloat(localStorage.getItem('printerPower') || '500');
+            const totalHours = model.hours + model.minutes / 60;
+            const energyCost = (printerPower / 1000) * totalHours * energyPrice;
+
+            const totalCost = plasticCost + energyCost;
+
+            const content = `
+                <div class="stat-row">
+                    <span class="stat-label">Материал</span>
+                    <span class="stat-value">${spool.name}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Дата печати</span>
+                    <span class="stat-value">${model.date}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Время печати</span>
+                    <span class="stat-value">${model.hours}ч ${model.minutes}м</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Расход пластика</span>
+                    <span class="stat-value">${model.filament}г</span>
+                </div>
+                <div class="divider"></div>
+                <div class="stat-row">
+                    <span class="stat-label">Стоимость пластика</span>
+                    <span class="stat-value">₽${plasticCost.toFixed(2)}</span>
+                </div>
+                <div class="formula-box">Пластик = ${model.filament}г × ₽${pricePerGram.toFixed(2)}/г = ₽${plasticCost.toFixed(2)}</div>
+                <div class="stat-row">
+                    <span class="stat-label">Стоимость электричества</span>
+                    <span class="stat-value">₽${energyCost.toFixed(2)}</span>
+                </div>
+                <div class="formula-box">Электро = (${printerPower}W ÷ 1000) × ${totalHours.toFixed(1)}ч × ₽${energyPrice}/кВт⋅ч = ₽${energyCost.toFixed(2)}</div>
+                <div class="stat-row">
+                    <span class="stat-label"><strong>Себестоимость</strong></span>
+                    <span class="stat-value"><strong>₽${totalCost.toFixed(2)}</strong></span>
+                </div>
+                ${model.notes ? `<div class="stat-row"><span class="stat-label">Заметки</span><span class="stat-value" style="text-align: right; max-width: 50%;">${model.notes}</span></div>` : ''}
+            `;
+
+            document.getElementById('modelDetailsTitle').textContent = model.name;
+            document.getElementById('modelDetailsContent').innerHTML = content;
+
+            const saleSection = document.getElementById('saleSection');
+            const saleDetailsSection = document.getElementById('saleDetailsSection');
+
+            if (model.salePrice === null) {
+                saleSection.style.display = 'block';
+                saleDetailsSection.style.display = 'none';
+                document.getElementById('salePrice').value = '';
+                document.getElementById('saleExpenses').value = '0';
+            } else {
+                saleSection.style.display = 'none';
+                saleDetailsSection.style.display = 'block';
+
+                const profit = model.salePrice - totalCost - (model.saleExpenses || 0);
+                const margin = (profit / totalCost) * 100;
+
+                document.getElementById('salePriceDisplay').textContent = `₽${model.salePrice.toFixed(2)}`;
+                document.getElementById('costDisplay').textContent = `₽${totalCost.toFixed(2)}`;
+                document.getElementById('expensesDisplay').textContent = `₽${(model.saleExpenses || 0).toFixed(2)}`;
+                document.getElementById('profitDisplay').textContent = profit > 0 ? `✓ +₽${profit.toFixed(2)}` : profit === 0 ? `= ₽0` : `✗ -₽${Math.abs(profit).toFixed(2)}`;
+                document.getElementById('profitDisplay').className = profit > 0 ? 'stat-value positive' : profit === 0 ? 'stat-value neutral' : 'stat-value negative';
+                document.getElementById('marginDisplay').textContent = `${margin > 0 ? '+' : ''}${margin.toFixed(1)}%`;
+            }
+
+            showModal('modelDetailsModal');
+        }
+
+        async function saveSale() {
+            const salePrice = parseFloat(document.getElementById('salePrice').value);
+            const saleExpenses = parseFloat(document.getElementById('saleExpenses').value) || 0;
+
+            if (!salePrice || salePrice <= 0) {
+                alert('Введите цену продажи');
+                return;
+            }
+
+            const model = await dbGet(STORES.models, currentModelId);
+            model.salePrice = salePrice;
+            model.saleExpenses = saleExpenses;
+            model.saleDate = new Date().toISOString().split('T')[0];
+
+            await dbPut(STORES.models, model);
+            showModelDetails(currentModelId);
+        }
+
+        async function unsellModel() {
+            const model = await dbGet(STORES.models, currentModelId);
+            model.salePrice = null;
+            model.saleExpenses = null;
+            model.saleDate = null;
+
+            await dbPut(STORES.models, model);
+            showModelDetails(currentModelId);
+        }
+
+        async function deleteModel() {
+            if (!confirm('Удалить эту модель?')) return;
+
+            const model = await dbGet(STORES.models, currentModelId);
+            const spool = await dbGet(STORES.spools, model.spoolId);
+            spool.remaining += model.filament;
+            await dbPut(STORES.spools, spool);
+
+            await dbDelete(STORES.models, currentModelId);
+            hideModal('modelDetailsModal');
+        }
+
+        // ============== ANALYTICS ==============
+        async function updateAnalytics() {
+            const models = await dbGetAll(STORES.models);
+            const energyPrice = parseFloat(localStorage.getItem('energyPrice') || '8.5');
+            const printerPower = parseFloat(localStorage.getItem('printerPower') || '500');
+
+            let totalPlastic = 0, totalEnergy = 0, totalProfit = 0, soldCount = 0;
+            const profitableModels = [];
+
+            for (const model of models) {
+                const spool = await dbGet(STORES.spools, model.spoolId);
+                const pricePerGram = spool.price / spool.weight;
+                const plasticCost = model.filament * pricePerGram;
+                const totalHours = model.hours + model.minutes / 60;
+                const energyCost = (printerPower / 1000) * totalHours * energyPrice;
+
+                totalPlastic += plasticCost;
+                totalEnergy += energyCost;
+
+                if (model.salePrice !== null) {
+                    const totalCost = plasticCost + energyCost;
+                    const profit = model.salePrice - totalCost - (model.saleExpenses || 0);
+                    totalProfit += profit;
+                    soldCount++;
+                    profitableModels.push({ name: model.name, profit });
+                }
+            }
+
+            document.getElementById('analyticPlastic').textContent = `₽${totalPlastic.toFixed(2)}`;
+            document.getElementById('analyticEnergy').textContent = `₽${totalEnergy.toFixed(2)}`;
+            document.getElementById('analyticProfit').textContent = `₽${totalProfit.toFixed(2)}`;
+            document.getElementById('analyticProfit').className = totalProfit > 0 ? 'stat-value positive' : totalProfit === 0 ? 'stat-value neutral' : 'stat-value negative';
+            document.getElementById('analyticSold').textContent = soldCount;
+
+            // Top models
+            profitableModels.sort((a, b) => b.profit - a.profit);
+            const topModelsHTML = profitableModels.slice(0, 5).map(m => `
+                <div class="stat-row">
+                    <span class="stat-label">${m.name}</span>
+                    <span class="stat-value positive">+₽${m.profit.toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('topModels').innerHTML = topModelsHTML || '<p style="font-size: 12px; color: var(--color-text-secondary);">Нет проданных моделей</p>';
+        }
+
+        // ============== DASHBOARD UPDATE ==============
+        async function updateDashboard() {
+            const spools = await dbGetAll(STORES.spools);
+            const models = await dbGetAll(STORES.models);
+
+            let totalSpoolValue = 0, totalExpenses = 0, totalProfit = 0;
+            const energyPrice = parseFloat(localStorage.getItem('energyPrice') || '8.5');
+            const printerPower = parseFloat(localStorage.getItem('printerPower') || '500');
+
+            // Total spool value
+            for (const spool of spools) {
+                const pricePerGram = spool.price / spool.weight;
+                totalSpoolValue += pricePerGram * spool.remaining;
+            }
+
+            // Expenses and profit
+            for (const model of models) {
+                const spool = await dbGet(STORES.spools, model.spoolId);
+                const pricePerGram = spool.price / spool.weight;
+                const plasticCost = model.filament * pricePerGram;
+                const totalHours = model.hours + model.minutes / 60;
+                const energyCost = (printerPower / 1000) * totalHours * energyPrice;
+                const totalCost = plasticCost + energyCost;
+
+                totalExpenses += totalCost;
+
+                if (model.salePrice !== null) {
+                    const profit = model.salePrice - totalCost - (model.saleExpenses || 0);
+                    totalProfit += profit;
+                }
+            }
+
+            document.getElementById('totalSpoolValue').textContent = `₽${totalSpoolValue.toFixed(0)}`;
+            document.getElementById('totalExpenses').textContent = `₽${totalExpenses.toFixed(0)}`;
+            document.getElementById('totalProfit').textContent = totalProfit > 0 ? `+₽${totalProfit.toFixed(0)}` : totalProfit === 0 ? '₽0' : `-₽${Math.abs(totalProfit).toFixed(0)}`;
+            document.getElementById('totalProfit').className = totalProfit > 0 ? 'stat-box-value' : totalProfit === 0 ? 'stat-box-value neutral' : 'stat-box-value negative';
+            document.getElementById('totalPrints').textContent = models.length;
+        }
+
+        async function updateUI() {
+            await renderSpools();
+            await renderModels();
+            await updateDashboard();
+            await updateAnalytics();
+        }
+
+        // ============== SETTINGS ==============
+        function saveSettings() {
+            localStorage.setItem('energyPrice', document.getElementById('energyPrice').value);
+            localStorage.setItem('printerPower', document.getElementById('printerPower').value);
+            updateUI();
+        }
+
+        function exportData() {
+            Promise.all([
+                dbGetAll(STORES.spools),
+                dbGetAll(STORES.models)
+            ]).then(([spools, models]) => {
+                const data = { spools, models, exported: new Date
